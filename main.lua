@@ -48,7 +48,7 @@ function love.textinput(t)
     end
 end
 function love.keypressed(key)
-    if key == "backspace" then
+    if key == "backspace" then  --copied right from the tutorial
         -- get the byte offset to the last UTF-8 character in the string.
         local byteoffset = utf8.offset(OUTPUTNAME, -1)
 

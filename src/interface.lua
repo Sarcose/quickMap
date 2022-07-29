@@ -1,3 +1,5 @@
+--messy,messy -_-
+
 local st1 = 'Welcome to quickMap! Convert an image into a lua table of rectangles for super simple mapping.\n'
 local st2 = 'Drag and drop an image onto the window (BMP or PNG only)\n'
 local st3 = 'Press +/- to change pixel size:\n'
