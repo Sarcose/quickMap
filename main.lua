@@ -88,7 +88,6 @@ BGColors = {
 function love.draw()
     drawMap()
     interface:draw()
-
 end
 
 function love.textinput(t)
