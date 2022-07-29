@@ -5,12 +5,14 @@ local st4 = '(object width and height will have a minimum of this value)\n'
 local st5 = 'Press F to type output filename (leave blank for <originalname>.lua):\n'
 local st6 = 'Press C to choose whether colors separate output rects:\n'
 local st7 = 'Press Tab at any time to change the text color of the UX\n'
-local st8 = 'Press H at any time to hide this interface\n'
+local st8 = 'Press B at any time to change the background color for visibility\n'
+local st9 = 'Press H at any time to hide this interface\n'
 
 local interface = {
     x = 10,y=10,font=lg.newFont('assets/font/LanaPixel.ttf',20),color = {1,1,1},colorind = 1,
+    bgind = 1,
     start = {
-        text = st1..st2..st3..st4..st5..st6..st7..st8,
+        text = st1..st2..st3..st4..st5..st6..st7..st8..st9,
         draw = function(self)
             local font = self.font
             local fspace = font:getHeight('W')
@@ -51,12 +53,14 @@ local interface = {
         end
     },
     mapDone = {
-        text = 'Arrows: move map (shift: faster)\n+/-: Zoom\nH: hide interface\nESC: restart',
+        text = 'Arrows: move map (shift: faster | alt: slower)\n+/-: Zoom\nH: hide interface\nR: reset transforms\nESC: restart',
         draw = function(self)
             local font = self.font
             local fspace = font:getHeight('W')
             lg.setColor(self.color)
             lg.print(self[self.state].text,lg.getWidth()/2-font:getWidth(self[self.state].text),lg.getHeight()/2)
+            local t2 = 'Total Merge Actions: '..tostring(_G.merges)..'\nTotal Rects Built: '..tostring(_G.totalRects)
+            lg.print(t2,lg.getWidth()/2-font:getWidth(self[self.state].text),lg.getHeight()/2+(font:getHeight('W')*5))
         end
     }
 }
@@ -68,6 +72,7 @@ UXColors = {
     {0,0,1},
     {0,0,0},
 }
+
 function interface:load(baton)
     self.controller = baton.new {
         controls = {
@@ -83,7 +88,10 @@ function interface:load(baton)
             left = {'key:left'},
             right = {'key:right'},
             shift = {'key:lshift','key:rshift'},
-            colortoggle = {'key:tab'}
+            alt = {'key:ralt','key:lalt'},
+            colortoggle = {'key:tab'},
+            bgtoggle = {'key:b'},
+            r = {'key:r'}
         },
         pairs = {
         },
@@ -108,6 +116,10 @@ end
 
 function interface:parseControls()
     local c = self.controller
+    if c:pressed('bgtoggle') then 
+        self.bgind = self.bgind + 1
+        if self.bgind > #BGColors then self.bgind = 1 end
+    end
     if c:pressed('h') then self.hide = boolSwitch(self.hide) end
     if c:pressed('colortoggle') then 
         self.colorind = self.colorind + 1
@@ -124,16 +136,19 @@ function interface:parseControls()
         if c:pressed('c') then BYCOLOR = boolSwitch(BYCOLOR) end
     elseif self.state == 'mapDone' then
         local speed = CAMERASPEED
-        if c:down('shift') then speed = speed * 2 end
+        local scale = SCALERATE
+        if c:down('shift') then speed = speed * 2 scale = scale*2 end
+        if c:down('alt') then speed = speed/3 scale = scale/3 end
         if c:down('up') then CAMERAY = CAMERAY - speed
         elseif c:down('down') then CAMERAY = CAMERAY + speed 
         end
         if c:down('left') then CAMERAX = CAMERAX - speed
         elseif c:down('right') then CAMERAX = CAMERAX + speed
         end
-        if c:down('plus') then CAMERASCALE = CAMERASCALE + SCALERATE
-        elseif c:down('minus') then CAMERASCALE = CAMERASCALE - SCALERATE
+        if c:down('plus') then CAMERASCALE = CAMERASCALE + scale
+        elseif c:down('minus') then CAMERASCALE = CAMERASCALE - scale
         end
+        if c:pressed('r') then CAMERASCALE = 1 CAMERAY = 0 CAMERAX = 0 end
     end
     if c:pressed('escape') then _G.displayMap = nil self.state = 'start' end
 end

@@ -69,16 +69,26 @@ end
 function love.load()
     interface:load(baton)
     _G.displayCanvas = lg.newCanvas(lg.getWidth(),lg.getHeight())
+    
 end
 
 function love.update(dt)
     interface:update(dt)
     if collisionMask.started then collisionMask:update(dt) end
 end
-
+BGColors = {
+    {0,0,0},
+    {0.7,0.7,0.7},
+    {1,1,1},
+    {0.7,0,0},
+    {0,0.7,0},
+    {0,0,0.7},
+}
 function love.draw()
-    interface:draw()
+    lg.clear(BGColors[interface.bgind])
+    --lg.setBackgroundColor()
     drawMap()
+    interface:draw()
 
 end
 
@@ -119,6 +129,7 @@ function drawMap()
             end
         end
         lg.setCanvas()
+        lg.setColor(1,1,1,1)
         lg.draw(_G.displayCanvas,CAMERAX,CAMERAY,0,CAMERASCALE)
     end
     lg.setColor(1,1,1,1)
