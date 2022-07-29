@@ -1,10 +1,12 @@
 lg = love.graphics
-
+local utf8 = require("utf8")
 local baton = require 'lib.baton'
 local interface = require 'src.interface'
 local collisionMask = require 'src.collisionMask'
+require 'src.utility'
 PIXELSIZE = 4
 FILENAME = ''
+OUTPUTNAME = ''
 BYCOLOR = true
 doTextInput = false
 CAMERAX,CAMERAY,CAMERASCALE = 0,0,5
@@ -13,59 +15,6 @@ SCALERATE = 0.3
 DRAWSTYLE = 'line'
 currentProcessingState = ''
 displayMap = {}
-
-function shallowcopy(orig)
-    local orig_type = type(orig)
-    local copy
-    if orig_type == 'table' then
-        copy = {}
-        for orig_key, orig_value in pairs(orig) do
-            copy[orig_key] = orig_value
-        end
-    else -- number, string, boolean, etc
-        copy = orig
-    end
-    return copy
-end
-function deepcopy(orig,src)
-    local orig_type = type(orig)
-    local copy
-    if orig_type == 'table' then
-        copy = {}
-        for orig_key, orig_value in next, orig, nil do
-            copy[deepcopy(orig_key,src)] = deepcopy(orig_value,src)
-        end
-        setmetatable(copy, deepcopy(getmetatable(orig),src))
-    else -- number, string, boolean, etc
-        copy = orig
-    end
-    return copy
-end
-
-function tablePrint(t, name, tab, exclude, limit)
-	local stop = false
-	if limit then if limit == 1 then stop = true else limit = limit - 1 end end
-	name = name or "table"
-	tab = tab or ""
-	print(tostring(tab).."  "..tostring(name).."= {")
-	for i,v in pairs(t) do
-		if i ~= exclude then
-			if (type(v) == "table") then
-				if not stop then tablePrint(t[i], i, tostring(tab).."  ",exclude,limit) 
-					else print(tostring(tab).."    "..tostring(i).."= "..tostring(v))
-				end
-
-			else
-			print(tostring(tab).."    "..tostring(i).."= "..tostring(v))
-			end
-		end
-	end
-	print(tostring(tab).."    ".."}")
-end
-
-function boolSwitch(bool)
-    if bool then return false else return true end
-end
 
 function love.load()
     interface:load(baton)
@@ -86,21 +35,38 @@ BGColors = {
     {0,0,0.7},
 }
 function love.draw()
+    lg.clear(BGColors[interface.bgind])
     drawMap()
     interface:draw()
 end
 
 function love.textinput(t)
     if doTextInput then
-        FILENAME = FILENAME..t
+        OUTPUTNAME = OUTPUTNAME..t
     elseif interface.state == 'error' then
         interface:changeState('start')
     end
 end
+function love.keypressed(key)
+    if key == "backspace" then
+        -- get the byte offset to the last UTF-8 character in the string.
+        local byteoffset = utf8.offset(OUTPUTNAME, -1)
+
+        if byteoffset then
+            -- remove the last UTF-8 character.
+            -- string.sub operates on bytes rather than UTF-8 characters, so we couldn't do string.sub(text, 1, -2).
+            OUTPUTNAME = string.sub(OUTPUTNAME, 1, byteoffset - 1)
+        end
+    end
+end
+
 local validTypes = {png = true,bmp = true,}
 function love.filedropped(file)
 	file:open("r")
-    local name = file:getFilename()
+    FILENAME = file:getFilename()
+    FILENAME = get_file_name(FILENAME)
+    FILENAME = removeBMPExtensions(FILENAME)
+    FILENAME = removePNGExtensions(FILENAME)
     local t = file:getExtension()
     if validTypes[t] then
         interface:changeState('processing')
@@ -109,11 +75,6 @@ function love.filedropped(file)
     else
         interface:changeState('error',t)
     end
-
-	--local data = file:read()
-	--print("Content of " .. file:getFilename() .. ' is')
-	--print(data)
-	--print("End of file")
 end
 
 function drawMap()
@@ -132,6 +93,25 @@ function drawMap()
         lg.draw(_G.displayCanvas,CAMERAX,CAMERAY,0,CAMERASCALE)
     end
 end
-function getFileType(filename)
 
+_G.WRITESUCCESS = 'NA'
+function writeMap(map)
+    if OUTPUTNAME == '' then OUTPUTNAME = FILENAME..'.lua'
+    else OUTPUTNAME = OUTPUTNAME..'.lua' print('outputname')
+    end
+    _G.WRITESUCCESS,_G.WRITEMESSAGE = love.filesystem.write(OUTPUTNAME, "local map = " .. TableToString(map,0).."return map")
 end
+
+function get_file_name(path)   
+    local start, finish = path:find('[%w%s!-={-|]+[_%.].+')   
+    return path:sub(start,#path) 
+end
+
+function removePNGExtensions(s)
+    return s:gsub("%.png", "")
+end
+function removeBMPExtensions(s)
+    return s:gsub("%.bmp", "")
+end
+
+

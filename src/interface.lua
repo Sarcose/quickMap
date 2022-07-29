@@ -17,12 +17,12 @@ local interface = {
             local font = self.font
             local fspace = font:getHeight('W')
             local _ = ''
-            if doTextInput then _ = '_'end
+            if doTextInput then _ = '|'end
             lg.setFont(font)
             lg.setColor(self.color)
             lg.print(self[self.state].text,self.x,self.y)
             lg.print(tostring(PIXELSIZE),font:getWidth(st3)+15,fspace*2+10)
-            lg.print(tostring('<'..FILENAME.._..'>'..'.lua'),font:getWidth(st5)+15,fspace*4+10)
+            lg.print(tostring('<'..OUTPUTNAME.._..'>'..'.lua'),font:getWidth(st5)+15,fspace*4+10)
             lg.print(tostring(BYCOLOR),font:getWidth(st6)+15,fspace*5+10)
         end
     },
@@ -53,16 +53,41 @@ local interface = {
         end
     },
     mapDone = {
-        text = 'Arrows: move map (shift: faster | alt: slower)\n+/-: Zoom\nH: hide interface\nR: reset transforms\nL: line or fill\nESC: restart',
+        text = 'Arrows: move map (shift: faster | alt: slower)\n+/-: Zoom\nH: hide interface\nR: reset transforms\nL: line or fill\nCTRL+R: restart',
+        t3 = 'CTRL+S: Output map to ',
+        t4 = '(press F to change filename)',
         draw = function(self)
             local font = self.font
             local fspace = font:getHeight('W')
             lg.setColor(self.color)
+            local name = OUTPUTNAME
+            if name == '' and not doTextInput then name = FILENAME..'.lua' 
+            elseif doTextInput then name = name..'|.lua'
+            else name = name..'.lua'
+            end
+            lg.print(self[self.state].t3..name,100,100)
             lg.print(self[self.state].text,lg.getWidth()/2-font:getWidth(self[self.state].text),lg.getHeight()/2)
             local t2 = 'Total Merge Actions: '..tostring(_G.merges)..'\nTotal Rects Built: '..tostring(_G.totalRects)
             lg.print(t2,lg.getWidth()/2-font:getWidth(self[self.state].text),lg.getHeight()/2+(font:getHeight('W')*6))
         end
+    },
+    writing = {
+        text = 'Writing Map.......',
+        draw = function(self)
+            local font = self.font
+            local s = self[self.state].text
+            if _G.WRITESUCCESS == true or _G.WRITESUCCESS == false then
+                local message = ''
+                if _G.WRITEMESSAGE then message = _G.WRITEMESSAGE end
+                s = s..'Results: '..successlabels[tostring(_G.WRITESUCCESS)]..'\n'..message..'\nPress CTRL+R to start over. Q to quit'
+            end
+            lg.print(s,100,100)
+        end,
     }
+}
+successlabels = {
+    ['true'] = 'success!',
+    ['false'] = 'fail...',
 }
 
 UXColors = {
@@ -93,6 +118,9 @@ function interface:load(baton)
             bgtoggle = {'key:b'},
             r = {'key:r'},
             l = {'key:l'},
+            s = {'key:s'},
+            ctrl = {'key:rctrl','key:lctrl'},
+            quit = {'key:q'},
         },
         pairs = {
         },
@@ -117,42 +145,57 @@ end
 
 function interface:parseControls()
     local c = self.controller
-    if c:pressed('bgtoggle') then 
-        self.bgind = self.bgind + 1
-        if self.bgind > #BGColors then self.bgind = 1 end
-    end
-    if c:pressed('h') then self.hide = boolSwitch(self.hide) end
-    if c:pressed('colortoggle') then 
-        self.colorind = self.colorind + 1
-        if self.colorind > #UXColors then self.colorind = 1 end
-        self.color = UXColors[self.colorind]
+    if not doTextInput then
+        if c:pressed('bgtoggle') then 
+            self.bgind = self.bgind + 1
+            if self.bgind > #BGColors then self.bgind = 1 end
+        end
+        if c:pressed('h') then self.hide = boolSwitch(self.hide) end
+        if c:pressed('colortoggle') then 
+            self.colorind = self.colorind + 1
+            if self.colorind > #UXColors then self.colorind = 1 end
+            self.color = UXColors[self.colorind]
+        end
     end
     if self.state == 'start' then
-        if c:pressed('plus') then PIXELSIZE = PIXELSIZE + 1
-        elseif c:pressed('minus') then PIXELSIZE = PIXELSIZE - 1
-        end
         if c:pressed('f') then doTextInput = true end
         if c:pressed('enter') then doTextInput = false end
-        if c:pressed('escape') and doTextInput then FILENAME = '' doTextInput = false end
-        if c:pressed('c') then BYCOLOR = boolSwitch(BYCOLOR) end
+        if c:pressed('escape') and doTextInput then OUTPUTNAME = '' doTextInput = false end
+        if not doTextInput then
+            if c:pressed('plus') then PIXELSIZE = PIXELSIZE + 1
+            elseif c:pressed('minus') then PIXELSIZE = PIXELSIZE - 1
+            end
+            if c:pressed('c') then BYCOLOR = boolSwitch(BYCOLOR) end
+        end
     elseif self.state == 'mapDone' then
         local speed = CAMERASPEED
         local scale = SCALERATE
-        if c:down('shift') then speed = speed * 2 scale = scale*2 end
-        if c:down('alt') then speed = speed/3 scale = scale/3 end
-        if c:down('up') then CAMERAY = CAMERAY - speed
-        elseif c:down('down') then CAMERAY = CAMERAY + speed 
+        if c:pressed('f') then doTextInput = true end
+        if c:pressed('enter') then doTextInput = false end
+        if c:pressed('escape') and doTextInput then OUTPUTNAME = '' doTextInput = false end
+        if not doTextInput then
+            if c:down('shift') then speed = speed * 2 scale = scale*2 end
+            if c:down('alt') then speed = speed/3 scale = scale/3 end
+            if c:down('up') then CAMERAY = CAMERAY - speed
+            elseif c:down('down') then CAMERAY = CAMERAY + speed 
+            end
+            if c:down('left') then CAMERAX = CAMERAX - speed
+            elseif c:down('right') then CAMERAX = CAMERAX + speed
+            end
+            if c:down('plus') then CAMERASCALE = CAMERASCALE + scale
+            elseif c:down('minus') then CAMERASCALE = CAMERASCALE - scale
+            end
+            if c:pressed('r') then CAMERASCALE = 1 CAMERAY = 0 CAMERAX = 0 end
+            if c:down('ctrl') and c:pressed('s') then writeMap(_G.displayMap) 
+                self.state = 'writing'
+            end
         end
-        if c:down('left') then CAMERAX = CAMERAX - speed
-        elseif c:down('right') then CAMERAX = CAMERAX + speed
-        end
-        if c:down('plus') then CAMERASCALE = CAMERASCALE + scale
-        elseif c:down('minus') then CAMERASCALE = CAMERASCALE - scale
-        end
-        if c:pressed('r') then CAMERASCALE = 1 CAMERAY = 0 CAMERAX = 0 end
     end
-    if c:pressed('escape') then _G.displayMap = nil self.state = 'start' end
-    if c:pressed('l') then if DRAWSTYLE == 'line' then DRAWSTYLE = 'fill' else DRAWSTYLE = 'line' end end
+    if not doTextInput then
+        if c:down('ctrl') and c:pressed('r') then _G.displayMap = nil self.state = 'start' end
+        if c:pressed('l') then if DRAWSTYLE == 'line' then DRAWSTYLE = 'fill' else DRAWSTYLE = 'line' end end
+        if c:pressed('quit') then love.event.quit() end
+    end
 end
 
 function interface:draw()
