@@ -10,6 +10,7 @@ doTextInput = false
 CAMERAX,CAMERAY,CAMERASCALE = 0,0,5
 CAMERASPEED = 10
 SCALERATE = 0.3
+DRAWSTYLE = 'line'
 currentProcessingState = ''
 displayMap = {}
 
@@ -85,8 +86,6 @@ BGColors = {
     {0,0,0.7},
 }
 function love.draw()
-    lg.clear(BGColors[interface.bgind])
-    --lg.setBackgroundColor()
     drawMap()
     interface:draw()
 
@@ -122,17 +121,17 @@ function drawMap()
     lg.setColor(1,1,1,1)
     if type(_G.displayMap) == 'table' then
         lg.setCanvas(_G.displayCanvas)
+        lg.clear(BGColors[interface.bgind])
         for rgbname,color in pairs(_G.displayMap) do
             for i,v in ipairs(color) do
                 lg.setColor(v.r,v.g,v.b,1)
-                lg.rectangle('line',v.x,v.y,v.w,v.h)
+                lg.rectangle(DRAWSTYLE,v.x,v.y,v.w,v.h)
             end
         end
         lg.setCanvas()
         lg.setColor(1,1,1,1)
         lg.draw(_G.displayCanvas,CAMERAX,CAMERAY,0,CAMERASCALE)
     end
-    lg.setColor(1,1,1,1)
 end
 function getFileType(filename)
 

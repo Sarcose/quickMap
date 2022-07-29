@@ -84,19 +84,19 @@ function mask:buildHorizontal(dt)
 	self.totalRects = 0
 	for rgb,color in pairs(bT) do
 		for i,v in ipairs(color) do
-			if not v.skip then	--no matter what we do, even if it doesn't get merged, it will get added
+			if not v.hskip then	--no matter what we do, even if it doesn't get merged, it will get added
 				--[[
 					now i need to reiterate the same table
 				]]
-				v.skip = true
+				v.hskip = true
 				for _,compare in ipairs(color) do
-					if not compare.skip then
+					if not compare.hskip then
 						--the first comparison is: is it next to me?
 						if self:isNext(v,compare) then
 							v.w = v.w + compare.w
-							compare.skip = true
+							compare.hskip = true
 							self.merges = self.merges + 1
-							print('merging',v.x,v.y,'with',compare.x,compare.y)
+							--print('horizontal merging',v.x,v.y,'with',compare.x,compare.y)
 						end
 					end
 				end
@@ -107,8 +107,48 @@ function mask:buildHorizontal(dt)
 			end
 		end
 	end
-	currentProcessingState = currentProcessingState..'horizontal table built; drawing'
-	_G.displayMap = horizontalTable
+	if horizontalOnly then
+		_G.displayMap = horizontalTable
+		_G.merges = self.merges
+		_G.totalRects = self.totalRects
+		self.interface:changeState('mapDone')
+		self.started = false
+		self.state = 'done'
+	else
+		currentProcessingState = currentProcessingState..'horizontal table built; \nbuilding verticals'
+		self.horizontalTable = horizontalTable
+		self.state = 'buildVertical'
+	end
+	
+end
+horizontalOnly = false
+function mask:buildVertical(dt)
+	self.totalRects = 0
+	local verticalTable = {}
+	local hT = self.horizontalTable
+	for rgb,color in pairs(hT) do
+		for i,v in ipairs(color) do
+			if not v.vskip then
+				v.vskip = true
+				for _,compare in ipairs(color) do
+					if not compare.vskip then
+						if self:isVertical(v,compare) then
+							v.h = v.h + compare.h
+							compare.vskip = true
+							self.merges = self.merges + 1
+							--print('vertical merging',v.x,v.y,'with',compare.x,compare.y)
+						end
+					end
+				end		
+				self.totalRects = self.totalRects + 1
+				if verticalTable[rgb]==nil then verticalTable[rgb] = {} end
+				table.insert(verticalTable[rgb],v)
+			end
+		end
+	end
+	currentProcessingState = currentProcessingState..'vertical table built; drawing'
+	self:removeNoise(verticalTable)
+	_G.displayMap = verticalTable
 	_G.merges = self.merges
 	_G.totalRects = self.totalRects
 	self.interface:changeState('mapDone')
@@ -117,42 +157,18 @@ function mask:buildHorizontal(dt)
 end
 
 function mask:isNext(o,c)
-	if o.y == c.y and ((o.x+o.w == c.x or o.x == c.x+c.w)) then return true end
+	if o.y == c.y and o.h == c.h and ((o.x+o.w == c.x or o.x == c.x+c.w)) then return true end
 end
-
-function mask:buildHorizontal_old(dt)
-	local horizontalTable = {}
-	local baseTable = self.baseTable
-	local BTCopy = deepcopy(baseTable)
-	local items = 0
-	for rgbname,color in pairs(baseTable) do
-		for i=1,#color do	--we seem to be detecting a bunch of rects but are still eventually adding everything back to htable
-			local item = shallowcopy(color[i])	--oops...
-			for k=1,#BTCopy[rgbname] do
-				if i ~= k and not color[i].skip then
-					local o = BTCopy[rgbname][k]
-					if not o.skip then
-						if o.y == item.y and o.h == item.h and o.x == item.y+item.w then
-							item.w = item.w + o.w
-							o.skip = true
-							color[k].skip = true
-							items = items + 1
-							print('adding width to '..tostring(item.x)..' '..tostring(item.y)..'from index '..tostring(k),items)
-						end
-					end
-				end
-			end
-			if horizontalTable[rgbname] == nil then horizontalTable[rgbname] = {} end
-			table.insert(horizontalTable[rgbname],item)
+function mask:isVertical(o,c)
+	if o.x == c.x and o.w == c.w and ((o.y+o.h == c.y or o.y == c.y+c.h)) then return true end
+end
+function mask:removeNoise(table)
+	for rgb,color in pairs(table) do
+		for i,v in ipairs(color) do
+			v.hskip = nil
+			v.vskip = nil
 		end
 	end
-	currentProcessingState = currentProcessingState..'horizontal table built; drawing'
-	_G.displayMap = horizontalTable
---	tablePrint(_G.displayMap)
-	print('final item count: ',items)
-	self.interface:changeState('mapDone')
-	self.started = false
-	self.state = 'done'
 end
 
 function mask:done(dt)

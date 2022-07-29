@@ -53,14 +53,14 @@ local interface = {
         end
     },
     mapDone = {
-        text = 'Arrows: move map (shift: faster | alt: slower)\n+/-: Zoom\nH: hide interface\nR: reset transforms\nESC: restart',
+        text = 'Arrows: move map (shift: faster | alt: slower)\n+/-: Zoom\nH: hide interface\nR: reset transforms\nL: line or fill\nESC: restart',
         draw = function(self)
             local font = self.font
             local fspace = font:getHeight('W')
             lg.setColor(self.color)
             lg.print(self[self.state].text,lg.getWidth()/2-font:getWidth(self[self.state].text),lg.getHeight()/2)
             local t2 = 'Total Merge Actions: '..tostring(_G.merges)..'\nTotal Rects Built: '..tostring(_G.totalRects)
-            lg.print(t2,lg.getWidth()/2-font:getWidth(self[self.state].text),lg.getHeight()/2+(font:getHeight('W')*5))
+            lg.print(t2,lg.getWidth()/2-font:getWidth(self[self.state].text),lg.getHeight()/2+(font:getHeight('W')*6))
         end
     }
 }
@@ -91,7 +91,8 @@ function interface:load(baton)
             alt = {'key:ralt','key:lalt'},
             colortoggle = {'key:tab'},
             bgtoggle = {'key:b'},
-            r = {'key:r'}
+            r = {'key:r'},
+            l = {'key:l'},
         },
         pairs = {
         },
@@ -151,6 +152,7 @@ function interface:parseControls()
         if c:pressed('r') then CAMERASCALE = 1 CAMERAY = 0 CAMERAX = 0 end
     end
     if c:pressed('escape') then _G.displayMap = nil self.state = 'start' end
+    if c:pressed('l') then if DRAWSTYLE == 'line' then DRAWSTYLE = 'fill' else DRAWSTYLE = 'line' end end
 end
 
 function interface:draw()
