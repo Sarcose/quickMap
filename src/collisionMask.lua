@@ -121,8 +121,8 @@ function mask:buildVertical(dt)
 		end
 	end
 	currentProcessingState = currentProcessingState..'vertical table built; drawing'
-	self:removeNoise(verticalTable)
-	_G.displayMap = verticalTable
+	local processedTable = self:removeNoise(verticalTable)
+	_G.displayMap = processedTable
 	_G.merges = self.merges
 	_G.totalRects = self.totalRects
 	self.interface:changeState('mapDone')
@@ -146,7 +146,7 @@ function mask:removeNoise(t)
 			table.insert(flattened,v)
 		end
 	end
-	t = flattened
+	return flattened
 end
 
 function mask:done(dt)

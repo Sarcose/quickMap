@@ -82,11 +82,9 @@ function drawMap()
     if type(_G.displayMap) == 'table' then
         lg.setCanvas(_G.displayCanvas)
         lg.clear(BGColors[interface.bgind])
-        for rgbname,color in pairs(_G.displayMap) do
-            for i,v in ipairs(color) do
-                lg.setColor(v.r,v.g,v.b,1)
-                lg.rectangle(DRAWSTYLE,v.x,v.y,v.w,v.h)
-            end
+        for i,v in ipairs(_G.displayMap) do
+            lg.setColor(v.r,v.g,v.b,1)
+            lg.rectangle(DRAWSTYLE,v.x,v.y,v.w,v.h)
         end
         lg.setCanvas()
         lg.setColor(1,1,1,1)
