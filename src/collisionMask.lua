@@ -130,19 +130,23 @@ function mask:buildVertical(dt)
 	self.state = 'done'
 end
 
+
 function mask:isNext(o,c)
 	if o.y == c.y and o.h == c.h and ((o.x+o.w == c.x or o.x == c.x+c.w)) then return true end
 end
 function mask:isVertical(o,c)
 	if o.x == c.x and o.w == c.w and ((o.y+o.h == c.y or o.y == c.y+c.h)) then return true end
 end
-function mask:removeNoise(table)
-	for rgb,color in pairs(table) do
+function mask:removeNoise(t)
+	local flattened = {}
+	for rgb,color in pairs(t) do
 		for i,v in ipairs(color) do
 			v.hskip = nil
 			v.vskip = nil
+			table.insert(flattened,v)
 		end
 	end
+	t = flattened
 end
 
 function mask:done(dt)
